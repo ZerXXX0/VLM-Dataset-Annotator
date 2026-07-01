@@ -1,0 +1,17 @@
+[
+    {
+        "id": "t1",
+        "name": "Default Grounding",
+        "text": "Analyze the object located inside the grounding bounding box <box>({x1},{y1},{x2},{y2})</box> and determine whether the object is a real firearm or a visually similar non-weapon object."
+    },
+    {
+        "id": "t2",
+        "name": "Reasoning First",
+        "text": "Analyze the highlighted object located at <box>({x1},{y1},{x2},{y2})</box>.\nExplain your reasoning before deciding whether it is a firearm."
+    },
+    {
+        "id": "t3",
+        "name": "False Alarm Check",
+        "text": "Inspect the highlighted object inside <box>({x1},{y1},{x2},{y2})</box>.\nDetermine if it is a real firearm or a false alarm."
+    }
+]

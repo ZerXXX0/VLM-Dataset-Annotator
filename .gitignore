@@ -1,0 +1,6 @@
+dataset/
+exports/
+__pycache__/
+.venv/
+utils/__pycache__
+components/__pycache__
