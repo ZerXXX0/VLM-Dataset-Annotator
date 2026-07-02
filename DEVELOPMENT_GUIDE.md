@@ -88,10 +88,14 @@ Streamlit reruns the script top-to-bottom on interaction. To maintain persistenc
     *   **Structure:** `{ "image_path": { bbox_id: { "prompt": "...", "reasoning": "...", ... } } }`
 
 **Crucial UI State Patterns:**
-To prevent Streamlit widgets (like `st.text_area`) from retaining old data when switching images, we avoid `st.form` wrappers and strictly enforce dynamic keys: e.g., `key=f"reasoning_{image_path}_{bbox['bbox_id']}"`. We also use explicit `on_change` callbacks to force widget memory updates.
+*   **Widget Keys:** To prevent Streamlit widgets (like `st.text_area`) from retaining old data when switching images, we avoid `st.form` wrappers and strictly enforce dynamic keys: e.g., `key=f"reasoning_{image_path}_{bbox['bbox_id']}"`. We also use explicit `on_change` callbacks to force widget memory updates.
+*   **State Persistence (internal_state.json):** Because `st.session_state` clears on browser refresh, `utils/exporter.py` maintains a master `internal_state.json` file. Upon startup, `app.py` loads this file to restore all previous annotations, effectively acting as a localized database to prevent data loss without needing to parse the finalized VLM formats backward.
+*   **Programmatic Navigation:** Changing indices via buttons (like "Jump to Unannotated") updates widget states (e.g., `st.session_state.jump_to_image`) natively without aggressive `st.rerun()` calls to prevent frontend-backend state desynchronization.
 
 ### 4. Key Workflows (Under the Hood)
+*   **Data Filtration:** `utils/dataset.py` scans directories but strictly filters out images that have missing or 0-byte `.txt` label files. This guarantees operators never load empty frames.
 *   **YOLO Parsing:** YOLO stores bounding boxes as normalized coordinates: `[class_id] [x_center] [y_center] [width] [height]`. `utils/yolo.py` reads the image dimensions and converts these into absolute pixel coordinates `(x1, y1, x2, y2)`.
+*   **Next Unannotated Calculation:** The "Jump" button dynamically reads the `.txt` file on disk, counts the number of non-empty bounding box lines, and compares it to the length of keys inside `st.session_state.annotations` for that specific image to find incomplete work.
 *   **Split-Aware Exporting:** `utils/exporter.py` iterates through `st.session_state.annotations`, reads the root directory of the `image_path` (e.g., `train/`), and dynamically groups output JSON objects into isolated files (`train.jsonl`, `valid.jsonl`).
 
 ### 5. Future Roadmap & PRD (Product Requirements Document)

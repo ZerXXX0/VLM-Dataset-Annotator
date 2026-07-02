@@ -34,7 +34,10 @@ The interface is divided into three main sections: the Navigation Sidebar (left)
 
 ### 1. Navigating Images
 * Use the **Sidebar** to filter by dataset split (train, valid, test) or search for specific images.
+* Empty images (no bounding boxes) are **automatically filtered out** to save time.
 * Use the `Prev`, `Next`, and `Skip` buttons to cycle through the dataset. You can also use keyboard shortcuts (`A` for Prev, `D` for Next).
+* **Jump to Image #:** Type an exact image number into the box to instantly teleport to it.
+* **🚀 Jump to Next Unannotated:** Click this button to automatically scan your dataset and jump to the first image that is either untouched or partially finished.
 
 ### 2. The Image Viewer & Bounding Boxes
 When an image is selected, the center panel displays the image with YOLO bounding boxes overlaid. You annotate one bounding box at a time.
@@ -63,8 +66,12 @@ When you are finished annotating, use the Export options in the sidebar:
 * **Upload to Roboflow:** Enter your API credentials to push your dataset directly back to a Roboflow project workspace.
 
 ## Features Overview
+- **Progress Auto-Saving:** The app generates an `internal_state.json` backup file. If you close your browser or restart your computer, it will flawlessly restore all your previous progress when you reopen the app!
 - **Semantic Reasoning Annotation:** Add reasoning texts for bounding boxes from YOLO.
 - **Export to Qwen2-VL:** Export annotations to the Qwen2-VL conversation format.
 - **Template System:** Re-use prompts and reasoning templates to speed up the process.
 - **Auto-Detection:** Inherits underlying dataset labels to enforce data consistency.
 - **Modular Architecture:** Easy to extend and integrate with large language models in the future.
+
+## Developer Documentation
+For deep technical details on the system architecture, Streamlit UI state management, and the Product Requirements Document (PRD) for upgrading to a Next.js collaborative platform, please see the [Development Guide](DEVELOPMENT_GUIDE.md).
