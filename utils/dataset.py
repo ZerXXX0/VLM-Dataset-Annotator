@@ -30,7 +30,15 @@ def get_images_in_split(dataset_path, split):
         images.extend(glob.glob(os.path.join(images_dir, ext)))
         images.extend(glob.glob(os.path.join(images_dir, ext.upper())))
         
-    return sorted(list(set(images)))
+    # Filter images to only include those with non-empty label files
+    filtered_images = []
+    for img_path in sorted(list(set(images))):
+        label_path = get_label_path(img_path)
+        if os.path.exists(label_path) and os.path.getsize(label_path) > 0:
+            # Optionally check if it contains actual text, but getsize > 0 is standard for YOLO
+            filtered_images.append(img_path)
+            
+    return filtered_images
 
 def get_label_path(image_path):
     """

@@ -16,11 +16,11 @@ from components.annotation_panel import render_annotation_panel
 from components.templates import load_templates, render_template_manager
 from utils.yolo import parse_yolo_label
 from utils.dataset import get_label_path, get_image_info
-from utils.exporter import export_dataset
+from utils.exporter import export_dataset, load_internal_state
 
 # Initialize session state for annotations
 if 'annotations' not in st.session_state:
-    st.session_state.annotations = {} # Format: { image_path: { bbox_id: annotation_dict } }
+    st.session_state.annotations = load_internal_state(config.OUTPUT_DIR)
 
 if 'selected_bbox_idx' not in st.session_state:
     st.session_state.selected_bbox_idx = 0

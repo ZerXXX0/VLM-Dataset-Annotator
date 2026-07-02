@@ -64,6 +64,30 @@ def render_navigation():
             if total_images > 0:
                 st.session_state.image_selector_box = images[st.session_state.current_image_idx]
 
+    if st.sidebar.button("🚀 Jump to Next Unannotated", use_container_width=True, key="btn_jump_unannotated"):
+        import os
+        from utils.dataset import get_label_path
+        target_idx = -1
+        for i, img_path in enumerate(images):
+            label_path = get_label_path(img_path)
+            num_bboxes = 0
+            if os.path.exists(label_path):
+                with open(label_path, 'r') as f:
+                    num_bboxes = sum(1 for line in f if line.strip())
+            
+            annotated_bboxes = len(st.session_state.annotations.get(img_path, {}))
+            if annotated_bboxes < num_bboxes:
+                target_idx = i
+                break
+                
+        if target_idx != -1:
+            st.session_state.current_image_idx = target_idx
+            st.session_state.selected_bbox_idx = 0
+            st.session_state.image_selector_box = images[target_idx]
+            st.session_state.jump_to_image = target_idx + 1
+        else:
+            st.sidebar.success("All images in this split are fully annotated!")
+
     # Auto Save Toggle
     st.session_state.auto_save = st.sidebar.checkbox("Auto Save", value=True)
     
@@ -82,9 +106,28 @@ def render_navigation():
             st.session_state.current_image_idx = new_idx
             st.session_state.selected_bbox_idx = 0
 
-    # Progress
+    # Progress & Navigation Jump
     st.sidebar.markdown("---")
     st.sidebar.markdown(f"**Current Image:** {st.session_state.current_image_idx + 1} / {total_images}")
+    
+    def on_jump_change():
+        new_val = st.session_state.jump_to_image - 1
+        if 0 <= new_val < total_images:
+            st.session_state.current_image_idx = new_val
+            st.session_state.selected_bbox_idx = 0
+            if total_images > 0:
+                st.session_state.image_selector_box = images[new_val]
+
+    st.sidebar.number_input(
+        "Jump to Image #", 
+        min_value=1, 
+        max_value=total_images if total_images > 0 else 1, 
+        value=st.session_state.current_image_idx + 1,
+        step=1,
+        key="jump_to_image",
+        on_change=on_jump_change
+    )
+
     progress = (st.session_state.current_image_idx + 1) / total_images if total_images > 0 else 0
     st.sidebar.progress(progress, text=f"Completion: {int(progress * 100)}%")
 

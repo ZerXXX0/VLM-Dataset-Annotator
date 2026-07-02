@@ -32,6 +32,29 @@ def format_qwen2vl(image_rel_path, prompt, reasoning, decision):
         ]
     }
 
+def save_internal_state(annotations, output_dir):
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    state_file = os.path.join(output_dir, 'internal_state.json')
+    with open(state_file, 'w', encoding='utf-8') as f:
+        json.dump(annotations, f, indent=2, ensure_ascii=False)
+
+def load_internal_state(output_dir):
+    state_file = os.path.join(output_dir, 'internal_state.json')
+    if not os.path.exists(state_file):
+        return {}
+    try:
+        with open(state_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            converted = {}
+            for img_path, bboxes in data.items():
+                converted[img_path] = {}
+                for bbox_id_str, ann in bboxes.items():
+                    converted[img_path][int(bbox_id_str)] = ann
+            return converted
+    except Exception:
+        return {}
+
 def export_dataset(annotations, dataset_path, output_dir, format_type='jsonl'):
     """
     Export all annotations to files in Qwen2-VL format, separated by dataset split.
@@ -39,6 +62,8 @@ def export_dataset(annotations, dataset_path, output_dir, format_type='jsonl'):
     """
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
+        
+    save_internal_state(annotations, output_dir)
         
     output_data_by_split = {}
     
