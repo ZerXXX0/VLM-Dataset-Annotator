@@ -1,5 +1,6 @@
 import streamlit as st
 import os
+import streamlit.components.v1 as components
 
 # Set page config before any other Streamlit commands
 st.set_page_config(
@@ -26,6 +27,44 @@ if 'selected_bbox_idx' not in st.session_state:
     st.session_state.selected_bbox_idx = 0
 
 def main():
+    # Inject keyboard shortcuts
+    shortcuts_js = """
+<script>
+const doc = window.parent.document;
+if (window.parent._shortcutListener) {
+    doc.removeEventListener('keydown', window.parent._shortcutListener);
+}
+window.parent._shortcutListener = function(e) {
+    const activeEl = doc.activeElement;
+    if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.isContentEditable)) {
+        return;
+    }
+
+    let targetBtn = null;
+    const buttons = Array.from(doc.querySelectorAll("button"));
+
+    if (e.key === 'ArrowLeft') {
+        targetBtn = buttons.find(b => b.innerText.includes("⏮️ Prev"));
+    } else if (e.key === 'ArrowRight') {
+        targetBtn = buttons.find(b => b.innerText.includes("⏭️ Next"));
+    } else if (e.key === 'ArrowUp') {
+        targetBtn = buttons.find(b => b.innerText.includes("Prev BBox"));
+    } else if (e.key === 'ArrowDown') {
+        targetBtn = buttons.find(b => b.innerText.includes("Next BBox"));
+    } else if (e.ctrlKey && e.key === 'Enter') {
+        targetBtn = buttons.find(b => b.innerText.includes("Save Annotation"));
+    }
+
+    if (targetBtn) {
+        e.preventDefault();
+        targetBtn.click();
+    }
+};
+doc.addEventListener('keydown', window.parent._shortcutListener);
+</script>
+"""
+    components.html(shortcuts_js, height=0, width=0)
+
     # Render Sidebar Navigation
     split, selected_image_path = render_navigation()
     
@@ -89,7 +128,7 @@ def main():
                 st.image(rendered_img, use_container_width=True)
                 
         # Template Manager Expander
-        with st.expander("⚙️ Manage Prompt Templates"):
+        with st.expander("⚙️ Create New Template"):
             render_template_manager()
 
     with col_right:
@@ -134,66 +173,6 @@ def main():
                         st.rerun()
                 else:
                     st.error("Please fill all required fields.")
-
-    # Global Actions
-    st.sidebar.markdown("---")
-    st.sidebar.header("Export")
-    if st.sidebar.button("Export to Qwen2-VL (JSONL)"):
-        out_file = export_dataset(st.session_state.annotations, config.DATASET_PATH, config.OUTPUT_DIR, format_type='jsonl')
-        if out_file:
-            st.sidebar.success(f"Exported to {out_file}")
-        else:
-            st.sidebar.warning("No complete annotations to export. Please save at least one annotation first.")
-            
-    if st.sidebar.button("Export to Qwen2-VL (JSON)"):
-        out_file = export_dataset(st.session_state.annotations, config.DATASET_PATH, config.OUTPUT_DIR, format_type='json')
-        if out_file:
-            st.sidebar.success(f"Exported to {out_file}")
-        else:
-            st.sidebar.warning("No complete annotations to export. Please save at least one annotation first.")
-
-    st.sidebar.markdown("---")
-    st.sidebar.header("Export to Roboflow")
-    rf_api_key = st.sidebar.text_input("API Key", type="password", key="rf_key")
-    rf_workspace = st.sidebar.text_input("Workspace Name", key="rf_ws")
-    rf_project = st.sidebar.text_input("Project Name", key="rf_proj")
-    
-    if st.sidebar.button("Upload to Roboflow"):
-        if not (rf_api_key and rf_workspace and rf_project):
-            st.sidebar.warning("Please fill all Roboflow credentials.")
-        else:
-            out_file = export_dataset(st.session_state.annotations, config.DATASET_PATH, config.OUTPUT_DIR, format_type='jsonl')
-            if not out_file:
-                st.sidebar.warning("No annotations to upload.")
-            else:
-                try:
-                    from roboflow import Roboflow
-                    rf = Roboflow(api_key=rf_api_key)
-                    project = rf.workspace(rf_workspace).project(rf_project)
-                    
-                    # Assuming uploading the whole dataset folder, or just providing a snippet if the format isn't standard YOLO
-                    # Since Qwen2-VL JSONL is a specific format, we can upload the original images and the generated JSONL
-                    # Wait, Roboflow upload takes images directly.
-                    st.sidebar.info("Uploading images. This may take a while...")
-                    # Upload images that have annotations
-                    uploaded_count = 0
-                    for img_path, bboxes in st.session_state.annotations.items():
-                        if not bboxes:
-                            continue
-                        try:
-                            # We can upload the image. If there's an API for conversation text, we would use it here.
-                            # For now, let's just use standard project upload.
-                            project.upload(img_path)
-                            uploaded_count += 1
-                        except Exception as e:
-                            st.sidebar.error(f"Error uploading {img_path}: {e}")
-                    
-                    st.sidebar.success(f"Successfully uploaded {uploaded_count} images to Roboflow!")
-                    st.sidebar.info(f"Note: Uploaded images to project {rf_project}. Make sure your Roboflow project is configured for your desired dataset type.")
-                except ImportError:
-                    st.sidebar.error("Roboflow library not found. Please 'pip install roboflow'.")
-                except Exception as e:
-                    st.sidebar.error(f"Roboflow Error: {e}")
 
 if __name__ == "__main__":
     main()

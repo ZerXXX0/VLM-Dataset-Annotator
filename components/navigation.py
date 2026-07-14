@@ -131,16 +131,4 @@ def render_navigation():
     progress = (st.session_state.current_image_idx + 1) / total_images if total_images > 0 else 0
     st.sidebar.progress(progress, text=f"Completion: {int(progress * 100)}%")
 
-    # Shortcuts Info
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("**Keyboard Shortcuts**")
-    st.sidebar.markdown("""
-    - `A`: Previous Image
-    - `D`: Next Image
-    - `Arrow Left`: Previous Bounding Box
-    - `Arrow Right`: Next Bounding Box
-    - `Ctrl+S`: Save
-    - `Ctrl+Enter`: Save Annotation
-    """)
-
     return split, selected_image

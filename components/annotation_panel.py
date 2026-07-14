@@ -1,6 +1,7 @@
 import streamlit as st
 import datetime
 import config
+from components.templates import load_answer_templates
 
 def render_annotation_panel(image_path, bbox, prompt_templates, current_annotation):
     """
@@ -13,31 +14,19 @@ def render_annotation_panel(image_path, bbox, prompt_templates, current_annotati
     if current_annotation is None:
         current_annotation = {}
 
-    # Step 2: Select Prompt Template
-    st.markdown("**Step 2: Select Prompt Template**")
-    prompt_names = [t["name"] for t in prompt_templates]
-    
-    # Find index of current prompt if exists
-    default_prompt_idx = 0
-    if "prompt_name" in current_annotation:
-        try:
-            default_prompt_idx = prompt_names.index(current_annotation["prompt_name"])
-        except ValueError:
-            pass
-
-    selected_prompt_name = st.selectbox(
-        "Prompt Template", 
-        prompt_names, 
-        index=default_prompt_idx,
-        key=f"prompt_sel_{image_path}_{bbox['bbox_id']}"
-    )
-    
-    # Get the actual prompt text and replace coordinates
-    selected_template = next((t for t in prompt_templates if t["name"] == selected_prompt_name), prompt_templates[0])
+    # Step 2: Prompt Template (UI deleted per user request, computed programmatically)
+    if prompt_templates:
+        saved_prompt_name = current_annotation.get("prompt_name")
+        selected_template = next((t for t in prompt_templates if t["name"] == saved_prompt_name), prompt_templates[0])
+    else:
+        selected_template = {
+            "name": "Default Grounding",
+            "text": "Analyze the object located inside the grounding bounding box <box>({x1},{y1},{x2},{y2})</box> and determine whether the object is a real firearm or a visually similar non-weapon object."
+        }
+    selected_prompt_name = selected_template["name"]
     prompt_text = selected_template["text"].format(
         x1=bbox['x1'], y1=bbox['y1'], x2=bbox['x2'], y2=bbox['y2']
     )
-    st.text_area("Final Prompt", prompt_text, height=100, disabled=True, key=f"prompt_text_{image_path}_{bbox['bbox_id']}")
 
     # Step 3: Select Final Decision (Auto-detected from YOLO label)
     st.markdown("**Step 3: Final Decision (Auto-detected from Dataset)**")
@@ -63,13 +52,23 @@ def render_annotation_panel(image_path, bbox, prompt_templates, current_annotati
         disabled=True
     )
 
+    # Load custom answer templates and merge with defaults
+    custom_templates = load_answer_templates()
+    custom_weapons = [t["name"] for t in custom_templates if t["type"] == "Weapon"]
+    custom_non_weapons = [t["name"] for t in custom_templates if t["type"] == "Non-Weapon"]
+
+    # Combine default and custom answer templates for lookup
+    all_answer_templates = dict(config.DEFAULT_ANSWER_TEMPLATES)
+    for t in custom_templates:
+        all_answer_templates[t["name"]] = t["text"]
+
     # Step 4: Select Answer Template
     st.markdown("**Step 4: Select Answer Template**")
     answer_class_options = ["None"]
     if decision == "Weapon":
-        answer_class_options += config.WEAPON_CLASSES
+        answer_class_options += config.WEAPON_CLASSES + custom_weapons
     elif decision == "Non-Weapon":
-        answer_class_options += config.NON_WEAPON_CLASSES
+        answer_class_options += config.NON_WEAPON_CLASSES + custom_non_weapons
         
     default_class_idx = 0
     if "answer_class" in current_annotation and current_annotation["answer_class"] in answer_class_options:
@@ -78,8 +77,8 @@ def render_annotation_panel(image_path, bbox, prompt_templates, current_annotati
     # Callback to update reasoning text when answer template changes
     def on_template_change():
         selected_cls = st.session_state[f"ans_class_{image_path}_{bbox['bbox_id']}"]
-        if selected_cls in config.DEFAULT_ANSWER_TEMPLATES:
-            st.session_state[f"reasoning_{image_path}_{bbox['bbox_id']}"] = config.DEFAULT_ANSWER_TEMPLATES[selected_cls]
+        if selected_cls in all_answer_templates:
+            st.session_state[f"reasoning_{image_path}_{bbox['bbox_id']}"] = all_answer_templates[selected_cls]
         elif selected_cls == "None":
             st.session_state[f"reasoning_{image_path}_{bbox['bbox_id']}"] = ""
 
@@ -96,8 +95,8 @@ def render_annotation_panel(image_path, bbox, prompt_templates, current_annotati
     
     default_reasoning = current_annotation.get("reasoning", "")
     auto_reasoning = ""
-    if answer_class != "None" and answer_class in config.DEFAULT_ANSWER_TEMPLATES:
-        auto_reasoning = config.DEFAULT_ANSWER_TEMPLATES[answer_class]
+    if answer_class != "None" and answer_class in all_answer_templates:
+        auto_reasoning = all_answer_templates[answer_class]
         
     # Let user edit
     reasoning = st.text_area(
@@ -107,28 +106,10 @@ def render_annotation_panel(image_path, bbox, prompt_templates, current_annotati
         key=f"reasoning_{image_path}_{bbox['bbox_id']}"
     )
 
-    # AI Assist Button
-    if st.button("✨ Generate Draft (AI Assist)", key=f"ai_btn_{image_path}_{bbox['bbox_id']}"):
-        st.info("AI Generation is a placeholder. Future integration with Qwen2-VL.")
-        # We would update the reasoning field here if we had state management for it.
-
-    # Step 6: Metadata
-    st.markdown("**Step 6: Metadata (Optional)**")
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        difficulty_idx = 0
-        if "difficulty" in current_annotation and current_annotation["difficulty"] in config.DIFFICULTY_LEVELS:
-            difficulty_idx = config.DIFFICULTY_LEVELS.index(current_annotation["difficulty"])
-        difficulty = st.selectbox("Difficulty", config.DIFFICULTY_LEVELS, index=difficulty_idx, key=f"diff_{image_path}_{bbox['bbox_id']}")
-        
-    with col2:
-        fp_idx = 0
-        if "false_positive_category" in current_annotation and current_annotation["false_positive_category"] in config.FALSE_POSITIVE_CATEGORIES:
-            fp_idx = config.FALSE_POSITIVE_CATEGORIES.index(current_annotation["false_positive_category"])
-        fp_category = st.selectbox("False Positive Category", config.FALSE_POSITIVE_CATEGORIES, index=fp_idx, key=f"fp_{image_path}_{bbox['bbox_id']}")
-
-    notes = st.text_input("Notes", value=current_annotation.get("notes", ""), key=f"notes_{image_path}_{bbox['bbox_id']}")
+    # Step 6: Metadata (UI deleted, set programmatically/defaulted)
+    difficulty = current_annotation.get("difficulty", "Easy")
+    fp_category = current_annotation.get("false_positive_category", "None")
+    notes = current_annotation.get("notes", "")
     
     # Validation before return
     is_valid = True
