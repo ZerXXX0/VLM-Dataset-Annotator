@@ -59,7 +59,7 @@ DEFAULT_ANSWER_TEMPLATES = {
     "Revolver": "The highlighted object exhibits a short barrel and overall geometry consistent with a revolver. The object is being held similarly to a firearm.",
     "Rifle": "The highlighted object is elongated and possesses features consistent with a rifle, including a stock, barrel, and handguard. The overall appearance and handling indicate a firearm.",
     "Shotgun": "The highlighted object is long and exhibits characteristics typical of a shotgun, including an elongated barrel and shoulder stock.",
-    "Smartphone": "The object has a flat rectangular appearance without visible firearm components such as a trigger guard or barrel. The individual is holding it close to the ear, which is consistent with smartphone usage rather than weapon handling.",
+    "Smartphone": "The object has a flat rectangular appearance without visible firearm components such as a trigger guard or barrel. The individual is holding it as if using a smartphone, which is consistent with smartphone usage rather than weapon handling.",
     "Flashlight": "The highlighted object appears cylindrical and lacks identifiable firearm components such as a trigger guard, grip, or barrel opening. Its appearance is consistent with a handheld flashlight.",
     "Paper": "The highlighted object appears thin, flat, and flexible without structural characteristics associated with firearms. Its visual appearance is consistent with paper.",
     "Book": "The object has a rectangular shape with proportions and appearance consistent with a book. No visible firearm components are present.",

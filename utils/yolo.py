@@ -43,6 +43,11 @@ def parse_yolo_label(file_path, image_width, image_height):
             # Convert to pixel coordinates (x1, y1, x2, y2)
             w_px = width * image_width
             h_px = height * image_height
+            
+            # Skip extremely small/zero-size bounding boxes (dataset artifacts)
+            if w_px < 2 or h_px < 2:
+                continue
+                
             x_center_px = x_center * image_width
             y_center_px = y_center * image_height
             

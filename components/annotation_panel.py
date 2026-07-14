@@ -71,8 +71,14 @@ def render_annotation_panel(image_path, bbox, prompt_templates, current_annotati
         answer_class_options += config.NON_WEAPON_CLASSES + custom_non_weapons
         
     default_class_idx = 0
-    if "answer_class" in current_annotation and current_annotation["answer_class"] in answer_class_options:
-        default_class_idx = answer_class_options.index(current_annotation["answer_class"])
+    if "answer_class" in current_annotation:
+        if current_annotation["answer_class"] in answer_class_options:
+            default_class_idx = answer_class_options.index(current_annotation["answer_class"])
+    else:
+        if decision == "Weapon" and "Handgun" in answer_class_options:
+            default_class_idx = answer_class_options.index("Handgun")
+        elif decision == "Non-Weapon" and "Smartphone" in answer_class_options:
+            default_class_idx = answer_class_options.index("Smartphone")
         
     # Callback to update reasoning text when answer template changes
     def on_template_change():
@@ -82,13 +88,46 @@ def render_annotation_panel(image_path, bbox, prompt_templates, current_annotati
         elif selected_cls == "None":
             st.session_state[f"reasoning_{image_path}_{bbox['bbox_id']}"] = ""
 
-    answer_class = st.selectbox(
-        "Answer Template", 
-        answer_class_options, 
-        index=default_class_idx,
-        key=f"ans_class_{image_path}_{bbox['bbox_id']}",
-        on_change=on_template_change
-    )
+    # Get current value and index
+    sel_key = f"ans_class_{image_path}_{bbox['bbox_id']}"
+    current_val = st.session_state.get(sel_key, answer_class_options[default_class_idx])
+    if current_val in answer_class_options:
+        current_idx = answer_class_options.index(current_val)
+    else:
+        current_idx = default_class_idx
+
+    col_sel, col_prev, col_next = st.columns([6, 1, 1])
+    
+    with col_prev:
+        if st.button("◀️", key=f"btn_prev_tpl_{image_path}_{bbox['bbox_id']}", use_container_width=True):
+            new_idx = (current_idx - 1) % len(answer_class_options)
+            st.session_state[sel_key] = answer_class_options[new_idx]
+            selected_cls = answer_class_options[new_idx]
+            if selected_cls in all_answer_templates:
+                st.session_state[f"reasoning_{image_path}_{bbox['bbox_id']}"] = all_answer_templates[selected_cls]
+            elif selected_cls == "None":
+                st.session_state[f"reasoning_{image_path}_{bbox['bbox_id']}"] = ""
+            st.rerun()
+
+    with col_next:
+        if st.button("▶️", key=f"btn_next_tpl_{image_path}_{bbox['bbox_id']}", use_container_width=True):
+            new_idx = (current_idx + 1) % len(answer_class_options)
+            st.session_state[sel_key] = answer_class_options[new_idx]
+            selected_cls = answer_class_options[new_idx]
+            if selected_cls in all_answer_templates:
+                st.session_state[f"reasoning_{image_path}_{bbox['bbox_id']}"] = all_answer_templates[selected_cls]
+            elif selected_cls == "None":
+                st.session_state[f"reasoning_{image_path}_{bbox['bbox_id']}"] = ""
+            st.rerun()
+
+    with col_sel:
+        answer_class = st.selectbox(
+            "Answer Template", 
+            answer_class_options, 
+            index=current_idx,
+            key=sel_key,
+            on_change=on_template_change
+        )
 
     # Step 5: Reasoning Textbox
     st.markdown("**Step 5: Reasoning**")

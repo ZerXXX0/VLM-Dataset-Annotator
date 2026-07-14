@@ -27,6 +27,11 @@ if 'selected_bbox_idx' not in st.session_state:
     st.session_state.selected_bbox_idx = 0
 
 def main():
+    # Handle pending image navigation before widgets are instantiated to prevent StreamlitAPIException
+    if 'next_image_to_load' in st.session_state and st.session_state.next_image_to_load:
+        st.session_state.image_selector_box = st.session_state.next_image_to_load
+        del st.session_state.next_image_to_load
+
     # Inject keyboard shortcuts
     shortcuts_js = """
 <script>
@@ -51,7 +56,11 @@ window.parent._shortcutListener = function(e) {
         targetBtn = buttons.find(b => b.innerText.includes("Prev BBox"));
     } else if (e.key === 'ArrowDown') {
         targetBtn = buttons.find(b => b.innerText.includes("Next BBox"));
-    } else if (e.ctrlKey && e.key === 'Enter') {
+    } else if (e.key === '[') {
+        targetBtn = buttons.find(b => b.innerText === "◀️");
+    } else if (e.key === ']') {
+        targetBtn = buttons.find(b => b.innerText === "▶️");
+    } else if (e.key === 'Enter' || (e.ctrlKey && e.key === 'Enter')) {
         targetBtn = buttons.find(b => b.innerText.includes("Save Annotation"));
     }
 
@@ -167,10 +176,20 @@ doc.addEventListener('keydown', window.parent._shortcutListener);
                     if st.session_state.get('auto_save', True):
                         export_dataset(st.session_state.annotations, config.DATASET_PATH, config.OUTPUT_DIR, format_type='jsonl')
                         
-                    # Move to next bbox
+                    # Move to next bbox or next image if all bboxes are annotated
                     if st.session_state.selected_bbox_idx < len(bboxes) - 1:
                         st.session_state.selected_bbox_idx += 1
                         st.rerun()
+                    else:
+                        from utils.dataset import get_images_in_split
+                        images = get_images_in_split(config.DATASET_PATH, split)
+                        if images and st.session_state.current_image_idx < len(images) - 1:
+                            st.session_state.current_image_idx += 1
+                            st.session_state.selected_bbox_idx = 0
+                            st.session_state.next_image_to_load = images[st.session_state.current_image_idx]
+                            st.rerun()
+                        else:
+                            st.success("All bounding boxes in this image annotated! This is the last image in the split.")
                 else:
                     st.error("Please fill all required fields.")
 

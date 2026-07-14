@@ -66,14 +66,14 @@ def render_navigation():
 
     if st.sidebar.button("🚀 Jump to Next Unannotated", use_container_width=True, key="btn_jump_unannotated"):
         import os
-        from utils.dataset import get_label_path
+        from utils.yolo import parse_yolo_label
+        from utils.dataset import get_label_path, get_image_info
         target_idx = -1
         for i, img_path in enumerate(images):
             label_path = get_label_path(img_path)
-            num_bboxes = 0
-            if os.path.exists(label_path):
-                with open(label_path, 'r') as f:
-                    num_bboxes = sum(1 for line in f if line.strip())
+            img_width, img_height = get_image_info(img_path)
+            bboxes = parse_yolo_label(label_path, img_width, img_height)
+            num_bboxes = len(bboxes)
             
             annotated_bboxes = len(st.session_state.annotations.get(img_path, {}))
             if annotated_bboxes < num_bboxes:
